@@ -66,6 +66,7 @@
 #include <pwd.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <sys/xattr.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -6716,6 +6717,24 @@ caja_file_get_keywords (CajaFile *file)
 
 	keywords = g_list_concat (keywords, eel_g_str_list_copy (file->details->extension_emblems));
 	keywords = g_list_concat (keywords, eel_g_str_list_copy (file->details->pending_extension_emblems));
+	
+
+        const int XATTR_BUF_LEN = 255;;
+        const char const XATTR_PREFIX[] = "user.caja.";
+
+	char xattrs_buf[XATTR_BUF_LEN];
+	char const* attr_end = xattrs_buf + listxattr ( g_file_get_path( caja_file_get_location(file)), xattrs_buf, sizeof(xattrs_buf));
+
+	char *attr_ptr;
+	for(attr_ptr = xattrs_buf;
+                        attr_ptr < attr_end;
+                        attr_ptr += strlen(attr_ptr) + 1) {
+                //
+                //If it begins with XATTR_PREFIX, add a copy of the string to the keywords list, skipping the XATTR_PREFIX part
+		if(strncmp(attr_ptr,XATTR_PREFIX ,sizeof(XATTR_PREFIX)-1) == 0){
+			keywords = g_list_prepend (keywords, g_strdup(attr_ptr + sizeof(XATTR_PREFIX) -1 ));
+		};
+	};
 
 	return sort_keyword_list_and_remove_duplicates (keywords);
 }
